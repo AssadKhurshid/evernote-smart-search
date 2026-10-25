@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Search Demo</title>
+<style>
+  :root {
+    --primary:#0d9488; --primary-strong:#0f766e; --on-primary:#fff; --accent:#ea580c;
+    --bg:#f4f8f8; --surface:#ffffff; --surface-2:#f0fdfa; --text:#0f2f2d; --muted:#557370;
+    --line:#dbe7e6; --ring:#0d9488; --neg:#dc2626; --neg-bg:#fef2f2; --warn:#b45309; --warn-bg:#fffbeb;
+    --chip:#e6f6f4; --mark:#ccfbf1;
+    --shadow-sm:0 1px 2px rgb(15 47 45 / .06), 0 1px 3px rgb(15 47 45 / .08);
+    --shadow-md:0 4px 12px rgb(15 47 45 / .08), 0 12px 32px rgb(15 47 45 / .08);
+    --hero:linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%);
+    --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --primary:#2dd4bf; --primary-strong:#5eead4; --on-primary:#042f2e; --accent:#fb923c;
+      --bg:#0b1414; --surface:#122020; --surface-2:#0f1c1c; --text:#e6f4f2; --muted:#93b1ad;
+      --line:#21393a; --ring:#2dd4bf; --neg:#f87171; --neg-bg:#2a1414; --warn:#fbbf24; --warn-bg:#2a220f;
+      --chip:#163332; --mark:#134e4a;
+      --shadow-sm:0 1px 2px rgb(0 0 0 / .4); --shadow-md:0 8px 28px rgb(0 0 0 / .45);
+      --hero:linear-gradient(135deg, #042f2e 0%, #0f3f3c 55%, #115e59 100%);
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100dvh; background:var(--bg); color:var(--text);
+         font:16px/1.55 Inter, "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+         -webkit-font-smoothing:antialiased; }
+  svg.i { width:16px; height:16px; flex:none; fill:none; stroke:currentColor; stroke-width:2;
+          stroke-linecap:round; stroke-linejoin:round; }
+
+  header { background:var(--hero); color:#fff; padding:48px 16px 88px; }
+  .wrap { max-width:1040px; margin:0 auto; }
+  .eyebrow { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; letter-spacing:.08em;
+             text-transform:uppercase; padding:4px 10px; border-radius:999px; background:rgb(255 255 255 / .14); }
+  h1 { font-size:clamp(28px, 5vw, 40px); line-height:1.15; letter-spacing:-.02em; margin:14px 0 8px; font-weight:700; }
+  header p { margin:0; max-width:60ch; color:rgb(255 255 255 / .85); }
+
+  main { padding:0 16px 64px; }
+  .panel { margin-top:-56px; background:var(--surface); border:1px solid var(--line); border-radius:18px;
+           box-shadow:var(--shadow-md); padding:20px; }
+  label.lbl { display:block; font-size:13px; font-weight:600; color:var(--muted); margin:0 0 8px 2px; }
+  .search { position:relative; }
+  .search > svg.i { position:absolute; left:16px; top:50%; transform:translateY(-50%); width:20px; height:20px; color:var(--muted); }
+  .search input { width:100%; height:56px; padding:0 64px 0 48px; font:inherit; font-size:17px; color:var(--text);
+                  background:var(--surface-2); border:1.5px solid var(--line); border-radius:14px;
+                  transition:border-color .2s var(--ease), box-shadow .2s var(--ease); }
+  .search input::placeholder { color:var(--muted); }
+  .search input:focus { outline:none; border-color:var(--ring); box-shadow:0 0 0 4px rgb(13 148 136 / .18); }
+  kbd { position:absolute; right:14px; top:50%; transform:translateY(-50%); font:12px ui-monospace, monospace;
+        color:var(--muted); border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:2px 7px; background:var(--surface); }
+  .hint { font-size:13px; color:var(--muted); margin:8px 2px 0; }
+
+  .examples { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+  .examples button { min-height:36px; padding:6px 12px; font:13px ui-monospace, "Cascadia Code", monospace; color:var(--text);
+                     background:var(--surface); border:1px solid var(--line); border-radius:10px; cursor:pointer;
+                     transition:background .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease); }
+  .examples button:hover { border-color:var(--primary); background:var(--chip); }
+  .examples button:active { transform:scale(.97); }
+  .examples button:focus-visible, .chip:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+
+  .parsed { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-height:40px; margin:20px 2px 4px; }
+  .parsed .label { font-size:12px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-right:4px; }
+  .chip { display:inline-flex; align-items:center; gap:6px; padding:6px 12px; border-radius:999px; font-size:13.5px; font-weight:500;
+          background:var(--chip); color:var(--text); border:1px solid transparent; animation:pop .22s var(--ease) both; }
+  .chip svg.i { color:var(--primary); }
+  .chip .not { font-size:11px; font-weight:700; letter-spacing:.06em; color:#fff; background:var(--neg); padding:1px 6px; border-radius:4px; }
+  .chip.neg { background:var(--neg-bg); color:var(--neg); border-color:color-mix(in srgb, var(--neg) 30%, transparent); }
+  .chip.neg svg.i { color:var(--neg); }
+  .chip.bad { background:var(--warn-bg); color:var(--warn); border:1px dashed var(--warn); }
+  .chip.bad svg.i { color:var(--warn); }
+  .chip.any { background:var(--accent); color:#fff; }
+  .chip.any svg.i { color:#fff; }
+  .none { color:var(--muted); font-size:14px; }
+
+  .bar { display:flex; justify-content:space-between; align-items:baseline; margin:28px 2px 12px; }
+  .bar h2 { font-size:18px; margin:0; letter-spacing:-.01em; }
+  .count { font-size:14px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .count b { color:var(--primary); }
+
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:14px; }
+  .note { position:relative; background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:18px;
+          box-shadow:var(--shadow-sm); transition:transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease);
+          animation:rise .28s var(--ease) both; }
+  .note:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); border-color:color-mix(in srgb, var(--primary) 35%, var(--line)); }
+  .note h3 { margin:0 0 6px; font-size:16.5px; line-height:1.3; letter-spacing:-.01em; }
+  .nb { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; color:var(--primary-strong);
+        background:var(--chip); padding:3px 9px; border-radius:999px; margin-bottom:10px; }
+  .body { font-size:14.5px; color:var(--muted); margin:0 0 12px; }
+  .tags { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:6px; border:1px solid var(--line); color:var(--text); }
+  .tag::before { content:"#"; color:var(--muted); }
+  .todos { list-style:none; margin:0 0 12px; padding:0; display:grid; gap:4px; font-size:14px; }
+  .todos li { display:flex; align-items:center; gap:8px; }
+  .todos li.done { color:var(--muted); text-decoration:line-through; }
+  .todos li.done svg.i { color:var(--primary); }
+  .progress { height:4px; border-radius:4px; background:var(--line); overflow:hidden; margin:-4px 0 12px; }
+  .progress span { display:block; height:100%; background:var(--primary); border-radius:4px; }
+  .foot { display:flex; flex-wrap:wrap; gap:12px; font-size:12.5px; color:var(--muted); padding-top:12px; border-top:1px solid var(--line); }
+  .foot span { display:inline-flex; align-items:center; gap:5px; }
+  .foot svg.i { width:14px; height:14px; }
+  mark { background:var(--mark); color:inherit; border-radius:3px; padding:0 2px; }
+
+  .empty { grid-column:1 / -1; text-align:center; padding:48px 16px; border:1.5px dashed var(--line); border-radius:16px; color:var(--muted); }
+  .empty svg.i { width:32px; height:32px; color:var(--primary); margin-bottom:8px; }
+  .empty strong { display:block; color:var(--text); font-size:17px; margin-bottom:4px; }
+
+  footer { text-align:center; color:var(--muted); font-size:13px; padding:0 16px 32px; }
+
+  @keyframes pop { from { opacity:0; transform:scale(.92); } }
+  @keyframes rise { from { opacity:0; transform:translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; transition:none !important; } }
+  @media (max-width:520px) { header { padding:32px 16px 80px; } .panel { padding:16px; } kbd { display:none; } .search input { padding-right:16px; } .grid { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <span class="eyebrow"><svg class="i"><use href="#i-spark"/></svg>Reverse-engineering demo</span>
+    <h1>Smart Search, rebuilt</h1>
+    <p>Our own parser for a note-search query language, based on static analysis notes. All notes below are fake.</p>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <section class="panel" aria-label="Search">
+      <label class="lbl" for="q">Search notes</label>
+      <div class="search">
+        <svg class="i" aria-hidden="true"><use href="#i-search"/></svg>
+        <input id="q" type="search" autocomplete="off" spellcheck="false"
+               placeholder="tag:work -tag:done todo:false created:day-7" aria-describedby="hint">
+        <kbd aria-hidden="true">/</kbd>
+      </div>
+      <p class="hint" id="hint">Combine words and operators. Prefix with <b>-</b> to exclude, end with <b>*</b> for prefix match.</p>
+      <div class="examples" id="ex" aria-label="Example queries"></div>
+      <div class="parsed" aria-live="polite"><span class="label">Parsed as</span><span id="chips"></span></div>
+    </section>
+
+    <div class="bar"><h2>Notes</h2><span class="count" id="count" aria-live="polite"></span></div>
+    <div class="grid" id="list"></div>
+  </div>
+</main>
+<footer>Independent demo. Not affiliated with any note-taking product.</footer>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="m8 12 3 3 5-6"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="4"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path d="m21 11-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></symbol>
+  <symbol id="i-title" viewBox="0 0 24 24"><path d="M5 5h14M12 5v14M9 19h6"/></symbol>
+  <symbol id="i-quote" viewBox="0 0 24 24"><path d="M7 7h4v4c0 3-2 5-4 6M14 7h4v4c0 3-2 5-4 6"/></symbol>
+  <symbol id="i-text" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-or" viewBox="0 0 24 24"><path d="M6 3v12a3 3 0 0 0 3 3h12M18 15l3 3-3 3"/><path d="M6 9h9"/></symbol>
+</svg>
+
+<script id="parser">
+// Own implementation of the operators confirmed in findings.md. Not Evernote code.
+const ALIASES = { intitle: 'title', title: 'title', tag: 'tag', notebook: 'notebook', todo: 'todo',
+                  created: 'created', updated: 'updated', resource: 'resource' };
+
+function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
+
+// day|week|month|year with optional +N/-N, or YYYYMMDD. Returns a Date or null.
+function parseDate(v, now) {
+  const rel = /^(day|week|month|year)([+-]\d+)?$/i.exec(v);
+  if (rel) {
+    const n = Number(rel[2] || 0), d = startOfDay(now);
+    switch (rel[1].toLowerCase()) {
+      case 'day': d.setDate(d.getDate() + n); break;
+      case 'week': d.setDate(d.getDate() - d.getDay() + 7 * n); break; // weeks start Sunday
+      case 'month': d.setDate(1); d.setMonth(d.getMonth() + n); break;
+      case 'year': d.setMonth(0, 1); d.setFullYear(d.getFullYear() + n); break;
+    }
+    return d;
+  }
+  const abs = /^(\d{4})(\d{2})(\d{2})$/.exec(v);
+  return abs ? new Date(+abs[1], +abs[2] - 1, +abs[3]) : null;
+}
+
+function parseQuery(query, now = new Date()) {
+  const terms = [];
+  let any = false;
+  for (let raw of query.match(/-?"[^"]*"?|\S+/g) || []) {
+    if (raw.toLowerCase() === 'any:') { any = true; continue; }
+    const t = { neg: false, prefixed: false, quoted: false, field: null, value: '', valid: true };
+    if (raw.startsWith('-') && raw.length > 1) { t.neg = true; raw = raw.slice(1); }
+    if (raw.endsWith('*') && !raw.startsWith('"')) { t.prefixed = true; raw = raw.slice(0, -1); }
+    if (raw.length > 2 && raw.startsWith('"') && raw.endsWith('"')) { t.quoted = true; raw = raw.slice(1, -1); }
+    const colon = raw.indexOf(':');
+    const field = !t.quoted && colon > 0 ? ALIASES[raw.slice(0, colon).toLowerCase()] : undefined;
+    if (field) {
+      t.field = field;
+      t.value = raw.slice(colon + 1).toLowerCase();
+      if (field === 'created' || field === 'updated') {
+        t.since = parseDate(t.value, now);
+        t.valid = t.since !== null;
+      } else if (field === 'todo') {
+        t.valid = t.prefixed ? t.value === '' : t.value === 'true' || t.value === 'false';
+      } else {
+        t.valid = t.value !== '' || t.prefixed;
+      }
+    } else {
+      t.value = raw.toLowerCase();
+    }
+    if (t.value === '' && !t.field) continue;
+    terms.push(t);
+  }
+  return { terms, any };
+}
+
+function textHas(text, word, prefixed) {
+  const esc = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(^|[^\\p{L}\\p{N}])' + esc + (prefixed ? '' : '(?![\\p{L}\\p{N}])'), 'iu').test(text);
+}
+
+function termMatches(t, note) {
+  const v = t.value, p = t.prefixed;
+  if (!t.field || !t.valid) {
+    const all = [note.title, note.body, note.tags.join(' '), note.todos.map(x => x.text).join(' ')].join('\n');
+    return textHas(all, v, p);
+  }
+  switch (t.field) {
+    case 'title': return textHas(note.title, v, p);
+    case 'tag': return note.tags.some(x => p ? x.toLowerCase().startsWith(v) : x.toLowerCase() === v);
+    case 'notebook': return p ? note.notebook.toLowerCase().startsWith(v) : note.notebook.toLowerCase() === v;
+    case 'todo': return p ? note.todos.length > 0 : note.todos.some(x => x.done === (v === 'true'));
+    case 'created': return note.created >= t.since;
+    case 'updated': return note.updated >= t.since;
+    case 'resource': return note.resources.some(m => p ? m.startsWith(v) : m === v);
+  }
+}
+
+function matchNote(note, parsed) {
+  if (!parsed.terms.length) return true;
+  const hit = t => termMatches(t, note) !== t.neg;
+  return parsed.any ? parsed.terms.some(hit) : parsed.terms.every(hit);
+}
+
+function describe(t) {
+  if (!t.valid) return `ignored value "${t.value}" for ${t.field}: — searched as text`;
+  const not = t.neg ? 'NOT ' : '';
+  const star = t.prefixed ? ' (prefix)' : '';
+  switch (t.field) {
+    case null: return `${not}${t.quoted ? 'phrase' : 'word'} "${t.value}"${star}`;
+    case 'title': return `${not}title has "${t.value}"${star}`;
+    case 'tag': return t.prefixed && !t.value ? `${not}has any tag` : `${not}tag = ${t.value}${star}`;
+    case 'notebook': return `${not}notebook = ${t.value}${star}`;
+    case 'todo': return t.prefixed ? `${not}has checkboxes` : `${not}has ${t.value === 'true' ? 'checked' : 'unchecked'} box`;
+    case 'resource': return `${not}attachment ${t.value || ''}${star}`;
+    default: return `${not}${t.field} since ${t.since.toDateString()}`;
+  }
+}
+</script>
+
+<script>
+const now = new Date();
+const ago = (days) => { const d = startOfDay(now); d.setDate(d.getDate() - days); d.setHours(10); return d; };
+const N = (title, body, tags, notebook, createdAgo, updatedAgo, todos = [], resources = []) =>
+  ({ title, body, tags, notebook, created: ago(createdAgo), updated: ago(updatedAgo),
+     todos: todos.map(([done, text]) => ({ done, text })), resources });
+
+const notes = [
+  N('Sprint planning', 'Goals for the next sprint and owner list.', ['work', 'planning'], 'Work', 1, 0,
+    [[true, 'Book room'], [false, 'Share agenda']]),
+  N('Grocery list', 'Milk, eggs, bread, mangoes.', ['home'], 'Personal', 0, 0,
+    [[false, 'Milk'], [false, 'Eggs'], [true, 'Bread']]),
+  N('Quarterly report draft', 'Revenue grew; churn is down. Add the chart.', ['work', 'finance'], 'Work', 20, 3,
+    [], ['application/pdf']),
+  N('Trip to Hunza', 'Hotel booking and road notes for the summer trip.', ['travel'], 'Personal', 45, 40,
+    [[true, 'Book hotel'], [true, 'Rent car']], ['image/jpeg']),
+  N('Team offsite ideas', 'Hiking, board games, a cooking class.', ['work', 'team'], 'Work', 6, 6),
+  N('Recipe: chicken karahi', 'Tomatoes, ginger, green chillies. Cook on high heat.', ['food', 'home'], 'Recipes', 90, 10,
+    [], ['image/png']),
+  N('Bug triage notes', 'Login timeout bug is fixed; search crash still open.', ['work', 'bugs'], 'Work', 2, 1,
+    [[true, 'Fix login timeout'], [false, 'Fix search crash']]),
+  N('Reading list', 'Books to read this year: Deep Work, Atomic Habits.', ['books'], 'Personal', 120, 30),
+  N('Meeting with design', 'New icons approved. Dark mode next week.', ['work', 'design', 'done'], 'Work', 4, 4,
+    [[true, 'Send icons']]),
+  N('Car service', 'Oil change due at 50,000 km.', ['car', 'home'], 'Personal', 12, 12,
+    [[false, 'Call workshop']]),
+  N('Interview questions', 'Ask about testing habits and code review.', ['work', 'hiring'], 'Work', 8, 2,
+    [], ['application/pdf']),
+  N('Birthday party', 'Cake order, balloons, invite list for Sara.', ['family'], 'Personal', 3, 3,
+    [[true, 'Order cake'], [false, 'Send invites']]),
+  N('Whiteboard photo', 'Architecture sketch from the planning session.', ['work', 'planning'], 'Work', 1, 1,
+    [], ['image/jpeg']),
+  N('Gym routine', 'Monday legs, Wednesday back, Friday chest.', ['health'], 'Personal', 200, 60),
+  N('Old project archive', 'Final notes from the 2024 migration project.', ['work', 'archive', 'done'], 'Archive', 400, 300),
+];
+
+const examples = ['tag:work -tag:done', 'intitle:report', '"search crash"', 'todo:false', 'todo:*',
+  'created:day-3', 'updated:week', 'notebook:personal', 'resource:image/*', 'any: hotel cake', 'plan*'];
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (d) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+const icon = (name) => `<svg class="i" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const ICONS = { title: 'title', tag: 'tag', notebook: 'book', todo: 'check', created: 'cal', updated: 'clock', resource: 'clip' };
+
+function chip(t) {
+  const name = !t.valid ? 'alert' : t.field ? ICONS[t.field] : t.quoted ? 'quote' : 'text';
+  const cls = !t.valid ? ' bad' : t.neg ? ' neg' : '';
+  const text = describe(t).replace(/^NOT /, '');
+  return `<span class="chip${cls}">${icon(name)}${t.neg && t.valid ? '<span class="not">NOT</span>' : ''}${esc(text)}</span>`;
+}
+
+// Wraps the positive text terms in <mark> so it is visible why a note matched.
+function highlight(text, terms) {
+  let html = esc(text);
+  for (const t of terms) {
+    if (t.neg || !t.value || (t.field && t.valid && t.field !== 'title')) continue;
+    const word = esc(t.value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    html = html.replace(new RegExp(`(^|[^\\p{L}\\p{N}])(${word}${t.prefixed ? '[\\p{L}\\p{N}]*' : ''})(?![\\p{L}\\p{N}])`, 'giu'), '$1<mark>$2</mark>');
+  }
+  return html;
+}
+
+function card(n, terms, i) {
+  const titleTerms = terms.filter(t => !t.field || !t.valid || t.field === 'title');
+  const bodyTerms = terms.filter(t => !t.field || !t.valid);
+  const done = n.todos.filter(t => t.done).length;
+  return `
+    <article class="note" style="animation-delay:${Math.min(i, 10) * 30}ms">
+      <span class="nb">${icon('book')}${esc(n.notebook)}</span>
+      <h3>${highlight(n.title, titleTerms)}</h3>
+      <p class="body">${highlight(n.body, bodyTerms)}</p>
+      <div class="tags">${n.tags.map(t => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+      ${n.todos.length ? `
+        <ul class="todos">${n.todos.map(t => `<li class="${t.done ? 'done' : ''}">${icon(t.done ? 'check' : 'box')}<span>${highlight(t.text, bodyTerms)}</span></li>`).join('')}</ul>
+        <div class="progress" role="progressbar" aria-label="Checklist progress" aria-valuenow="${done}" aria-valuemin="0" aria-valuemax="${n.todos.length}"><span style="width:${done / n.todos.length * 100}%"></span></div>` : ''}
+      <div class="foot">
+        <span>${icon('cal')}Created ${fmt(n.created)}</span>
+        <span>${icon('clock')}Updated ${fmt(n.updated)}</span>
+        ${n.todos.length ? `<span>${icon('check')}${done}/${n.todos.length} done</span>` : ''}
+        ${n.resources.length ? `<span>${icon('clip')}${esc(n.resources.join(', '))}</span>` : ''}
+      </div>
+    </article>`;
+}
+
+function render() {
+  const parsed = parseQuery($('q').value, now);
+  $('chips').innerHTML = parsed.terms.length
+    ? (parsed.any ? `<span class="chip any">${icon('or')}any: match ANY term</span> ` : '') + parsed.terms.map(chip).join(' ')
+    : '<span class="none">Nothing yet. Type a query or pick an example.</span>';
+  const hits = notes.filter(n => matchNote(n, parsed));
+  $('count').innerHTML = `<b>${hits.length}</b> of ${notes.length} notes`;
+  $('list').innerHTML = hits.length
+    ? hits.map((n, i) => card(n, parsed.terms, i)).join('')
+    : `<div class="empty">${icon('search')}<strong>No notes match</strong>Try removing a filter, or use <code>any:</code> to match any word.</div>`;
+}
+
+$('ex').innerHTML = examples.map(e => `<button type="button">${esc(e)}</button>`).join('');
+$('ex').onclick = (e) => {
+  const b = e.target.closest('button');
+  if (b) { $('q').value = b.textContent; render(); $('q').focus(); }
+};
+$('q').oninput = render;
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== $('q')) { e.preventDefault(); $('q').focus(); }
+});
+render();
+</script>
+</body>
+</html>
